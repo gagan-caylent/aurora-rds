@@ -45,13 +45,31 @@ data "aws_iam_policy_document" "monitoring_rds_assume_role" {
 }
 
 
+
+
 resource "aws_iam_role" "rds_enhanced_monitoring" {
   description         = "IAM Role for RDS Enhanced monitoring"
-  path                = "/"
+  #path                = "/"
+  name                = "rds-enhanced-monitoring-role"
   assume_role_policy  = data.aws_iam_policy_document.monitoring_rds_assume_role.json
   managed_policy_arns = ["arn:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"]
   tags                = var.tags
 }
+
+
+###########
+# DB Subnet
+###########
+
+resource "aws_db_subnet_group" "aurora_subnet_group" {
+  provider   = aws.primary
+  name       = "aurora-subnet-group"
+  subnet_ids = var.private_subnet_ids_p
+  tags = {
+    Name = "My DB subnet group"
+  }
+}
+
 
 
 ########
@@ -82,7 +100,7 @@ resource "aws_rds_cluster" "aurora_cluster" {
   apply_immediately               = true
   #skip_final_snapshot             = var.skip_final_snapshot
   #final_snapshot_identifier       = var.skip_final_snapshot ? null : "${var.final_snapshot_identifier_prefix}-${var.identifier}-${var.region}-${random_id.snapshot_id.hex}"
-  snapshot_identifier             = var.snapshot_identifier
+  #snapshot_identifier             = var.snapshot_identifier
   enabled_cloudwatch_logs_exports = local.logs_set
   tags                            = var.tags
   #depends_on = [
@@ -97,14 +115,14 @@ resource "aws_rds_cluster" "aurora_cluster" {
       # Uncomment the following line for Aurora Global Database to do major version upgrade as per https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/rds_global_cluster
       # engine_version,
   #  ]
-  }
+  #}
 }
 
 #tfsec:ignore:aws-rds-enable-performance-insights-encryption tfsec:ignore:aws-rds-enable-performance-insights
 resource "aws_rds_cluster_instance" "primary" {
   count                        = var.primary_instance_count #2
   #provider                     = aws.primary
-  identifier                   = "${var.name}-${var.region}-${count.index + 1}"
+  #identifier                   = "${var.name}-${var.region}-${count.index + 1}"
   cluster_identifier           = aws_rds_cluster.primary.id
   engine                       = aws_rds_cluster.primary.engine
   #engine_version               = var.engine_version_pg
@@ -113,7 +131,7 @@ resource "aws_rds_cluster_instance" "primary" {
   #db_subnet_group_name         = aws_db_subnet_group.private_p.name
   #db_parameter_group_name      = aws_db_parameter_group.aurora_db_parameter_group_p.id
   performance_insights_enabled = true
-  #monitoring_interval          = var.monitoring_interval
+  monitoring_interval          = var.monitoring_interval
   monitoring_role_arn          = aws_iam_role.rds_enhanced_monitoring.arn
   apply_immediately            = true
   tags                         = var.tags
