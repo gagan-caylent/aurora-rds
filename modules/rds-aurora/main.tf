@@ -3,10 +3,10 @@
 # Defaults
 ###########
 
-provider "aws" {
-  alias  = "primary"
-  region = var.region
-}
+# provider "aws" {
+#   #alias  = "primary"
+#   region = var.region
+# }
 
 # provider "aws" {
 #   alias  = "secondary"
@@ -19,7 +19,7 @@ provider "aws" {
 
 data "aws_availability_zones" "region_p" {
   state    = "available"
-  provider = aws.primary
+  #provider = aws.primary
 }
 
 # data "aws_availability_zones" "region_s" {
@@ -27,6 +27,16 @@ data "aws_availability_zones" "region_p" {
 #   provider = aws.secondary
 # }
 
+
+
+#########################
+# Create Unique password
+#########################
+
+resource "random_password" "master_password" {
+  length  = 10
+  special = false
+}
 
 ###########
 # IAM
@@ -82,9 +92,9 @@ resource "aws_rds_cluster" "aurora_cluster" {
   #global_cluster_identifier        = var.setup_globaldb ? aws_rds_global_cluster.globaldb[0].id : null
   cluster_identifier               = "${var.identifier}-${var.region}"
   engine                           = var.engine #"aurora-postgresql"
-  #engine_version                   = var.engine_version_pg
+  engine_version                   = var.engine_version_pg
   #allow_major_version_upgrade      = var.allow_major_version_upgrade
-  #availability_zones               = [data.aws_availability_zones.region_p.names[0], data.aws_availability_zones.region_p.names[1], data.aws_availability_zones.region_p.names[2]]
+  availability_zones               = [data.aws_availability_zones.region_p.names[0], data.aws_availability_zones.region_p.names[1], data.aws_availability_zones.region_p.names[2]]
   db_subnet_group_name             = aws_db_subnet_group.private_p.name
   port                             = var.port #"5432"
   database_name                    = var.database_name
@@ -108,24 +118,17 @@ resource "aws_rds_cluster" "aurora_cluster" {
     # Comment out the following line if this cluster has changed role to be the primary Aurora cluster because of a failover for terraform destroy to work
     #aws_rds_cluster_instance.secondary,
   #]
-  #lifecycle {
-  #  ignore_changes = [
-  #    replication_source_identifier,
-      # Since Terraform doesn't allow to conditionally specify a lifecycle policy, this can't be done dynamically.
-      # Uncomment the following line for Aurora Global Database to do major version upgrade as per https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/rds_global_cluster
-      # engine_version,
-  #  ]
-  #}
+ 
 }
 
 #tfsec:ignore:aws-rds-enable-performance-insights-encryption tfsec:ignore:aws-rds-enable-performance-insights
 resource "aws_rds_cluster_instance" "primary" {
   count                        = var.primary_instance_count #2
   #provider                     = aws.primary
-  #identifier                   = "${var.name}-${var.region}-${count.index + 1}"
+  identifier                   = "${var.name}-${var.region}-${count.index + 1}"
   cluster_identifier           = aws_rds_cluster.primary.id
   engine                       = aws_rds_cluster.primary.engine
-  #engine_version               = var.engine_version_pg
+  engine_version               = var.engine_version_pg
   auto_minor_version_upgrade   = var.auto_minor_version_upgrade #true
   instance_class               = var.instance_class
   #db_subnet_group_name         = aws_db_subnet_group.private_p.name

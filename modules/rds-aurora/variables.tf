@@ -14,11 +14,11 @@ variable "identifier" {
   default     = "aurora"
 }
 
-# variable "name" {
-#   description = "Prefix for resource names"
-#   type        = string
-#   default     = "aurora"
-# }
+variable "name" {
+  description = "Prefix for resource names"
+  type        = string
+  default     = "aurora"
+}
 
 /*
 variable "vpc_id" {
@@ -88,10 +88,10 @@ variable "username" {
   default     = "root"
 }
 
-variable "password" {
-  description = "Master DB password"
-  type        = string
-}
+# variable "password" {
+#   description = "Master DB password"
+#   type        = string
+# }
 
 variable "backup_retention_period" {
   description = "How long to keep backups for (in days)"
@@ -108,7 +108,7 @@ variable "preferred_backup_window" {
 variable "port" {
   description = "The port on which to accept connections"
   type        = string
-  default     = ""
+  default     = "5432"
 }
 
 variable "auto_minor_version_upgrade" {

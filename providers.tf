@@ -1,6 +1,6 @@
 terraform {
   required_version = ">= 1.0.0"
-  backend "remote" {}
+  
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -11,4 +11,9 @@ terraform {
       version = ">= 2.2"
     }
   }
+}
+
+provider "aws" {
+  region = "us-east-1"
+  profile = "caylent-dev"
 }

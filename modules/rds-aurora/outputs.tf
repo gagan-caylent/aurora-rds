@@ -34,7 +34,7 @@ output "aurora_cluster_database_name" {
 }
 
 output "aurora_cluster_master_username" {
-  description = "Aurora master username"
+  description = "Auroras master username"
   value       = aws_rds_cluster.primary.master_username
 }
 
