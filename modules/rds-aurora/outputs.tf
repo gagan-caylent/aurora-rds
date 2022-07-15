@@ -1,31 +1,31 @@
 output "aurora_cluster_arn" {
   description = "The ARN of the Primary Aurora cluster"
-  value       = aws_rds_cluster.primary.arn
+  value       = aws_rds_cluster.aurora_cluster.arn
 }
 
 output "aurora_cluster_id" {
   description = "The ID of the Primary Aurora cluster"
-  value       = aws_rds_cluster.primary.id
+  value       = aws_rds_cluster.aurora_cluster.id
 }
 
 output "aurora_cluster_resource_id" {
   description = "The Cluster Resource ID of the Primary Aurora cluster"
-  value       = aws_rds_cluster.primary.cluster_resource_id
+  value       = aws_rds_cluster.aurora_cluster.cluster_resource_id
 }
 
 output "aurora_cluster_endpoint" {
   description = "Primary Aurora cluster endpoint"
-  value       = aws_rds_cluster.primary.endpoint
+  value       = aws_rds_cluster.aurora_cluster.endpoint
 }
 
 output "aurora_cluster_reader_endpoint" {
   description = "Primary Aurora cluster reader endpoint"
-  value       = aws_rds_cluster.primary.reader_endpoint
+  value       = aws_rds_cluster.aurora_cluster.reader_endpoint
 }
 
 output "aurora_cluster_port" {
   description = "Primary Aurora cluster endpoint port"
-  value       = aws_rds_cluster.primary.port
+  value       = aws_rds_cluster.aurora_cluster.port
 }
 
 output "aurora_cluster_database_name" {
@@ -35,18 +35,18 @@ output "aurora_cluster_database_name" {
 
 output "aurora_cluster_master_username" {
   description = "Auroras master username"
-  value       = aws_rds_cluster.primary.master_username
+  value       = aws_rds_cluster.aurora_cluster.master_username
 }
 
 output "aurora_cluster_master_password" {
   description = "Aurora master User password"
-  value       = aws_rds_cluster.primary.master_password
+  value       = aws_rds_cluster.aurora_cluster.master_password
   sensitive   = true
 }
 
 output "aurora_cluster_hosted_zone_id" {
   description = "Route53 hosted zone id of the Primary Aurora cluster"
-  value       = aws_rds_cluster.primary.hosted_zone_id
+  value       = aws_rds_cluster.aurora_cluster.hosted_zone_id
 }
 
 # aws_rds_cluster_instance

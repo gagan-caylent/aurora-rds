@@ -60,9 +60,9 @@ data "aws_iam_policy_document" "monitoring_rds_assume_role" {
 resource "aws_iam_role" "rds_enhanced_monitoring" {
   description         = "IAM Role for RDS Enhanced monitoring"
   #path                = "/"
-  name                = "rds-enhanced-monitoring-role"
+  name                = "rds-enhanced-monitoring-role-demo"
   assume_role_policy  = data.aws_iam_policy_document.monitoring_rds_assume_role.json
-  managed_policy_arns = ["arn:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"]
+  managed_policy_arns = ["arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole"]
   tags                = var.tags
 }
 
@@ -72,7 +72,6 @@ resource "aws_iam_role" "rds_enhanced_monitoring" {
 ###########
 
 resource "aws_db_subnet_group" "aurora_subnet_group" {
-  provider   = aws.primary
   name       = "aurora-subnet-group"
   subnet_ids = var.private_subnet_ids_p
   tags = {
@@ -95,7 +94,7 @@ resource "aws_rds_cluster" "aurora_cluster" {
   engine_version                   = var.engine_version_pg
   #allow_major_version_upgrade      = var.allow_major_version_upgrade
   availability_zones               = [data.aws_availability_zones.region_p.names[0], data.aws_availability_zones.region_p.names[1], data.aws_availability_zones.region_p.names[2]]
-  db_subnet_group_name             = aws_db_subnet_group.private_p.name
+  db_subnet_group_name             = aws_db_subnet_group.aurora_subnet_group.name
   port                             = var.port #"5432"
   database_name                    = var.database_name
   master_username                  = var.username
@@ -126,8 +125,8 @@ resource "aws_rds_cluster_instance" "primary" {
   count                        = var.primary_instance_count #2
   #provider                     = aws.primary
   identifier                   = "${var.name}-${var.region}-${count.index + 1}"
-  cluster_identifier           = aws_rds_cluster.primary.id
-  engine                       = aws_rds_cluster.primary.engine
+  cluster_identifier           = aws_rds_cluster.aurora_cluster.id
+  engine                       = aws_rds_cluster.aurora_cluster.engine
   engine_version               = var.engine_version_pg
   auto_minor_version_upgrade   = var.auto_minor_version_upgrade #true
   instance_class               = var.instance_class
