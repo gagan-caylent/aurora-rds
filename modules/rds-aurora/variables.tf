@@ -3,10 +3,6 @@ variable "region" {
   description = "The name of the primary AWS region you wish to deploy into"
 }
 
-# variable "sec_region" {
-#   type        = string
-#   description = "The name of the secondary AWS region you wish to deploy into"
-# }
 
 variable "identifier" {
   description = "Cluster identifier"
@@ -20,42 +16,17 @@ variable "name" {
   default     = "aurora"
 }
 
-/*
-variable "vpc_id" {
-  type        = string
-  description = "VPC id"
-}
-*/
-
 variable "private_subnet_ids_p" {
   type        = list(string)
   description = "A list of private subnet IDs in your Primary AWS region VPC"
 }
 
-# variable "private_subnet_ids_s" {
-#   type        = list(string)
-#   description = "A list of private subnet IDs in your Secondary AWS region VPC"
-# }
-
-/*
-variable "allowed_security_groups" {
-  description = "A list of Security Group ID's to allow access to."
-  type        = list(string)
-  default     = []
-}
-*/
 
 variable "primary_instance_count" {
   description = "instance count for primary Aurora cluster"
   type        = number
   default     = 2
 }
-
-# variable "secondary_instance_count" {
-#   description = "instance count for secondary Aurora cluster"
-#   type        = number
-#   default     = 1
-# }
 
 variable "instance_class" {
   type        = string
@@ -141,24 +112,6 @@ variable "engine_version_pg" {
   default     = "13.6"
 }
 
-# variable "engine_version_mysql" {
-#   description = "Aurora database engine version."
-#   type        = string
-#   default     = "5.7.mysql_aurora.2.10.2"
-# }
-
-# variable "setup_globaldb" {
-#   description = "Setup Aurora Global Database with 1 Primary and 1 X-region Secondary cluster"
-#   type        = bool
-#   default     = false
-# }
-
-# variable "setup_as_secondary" {
-#   description = "Setup aws_rds_cluster.primary Terraform resource as Secondary Aurora cluster after an unplanned Aurora Global DB failover"
-#   type        = bool
-#   default     = false
-# }
-
 /*
 variable "replica_scale_enabled" {
   description = "Whether to enable autoscaling for Aurora read replica auto scaling"
@@ -184,12 +137,6 @@ variable "monitoring_interval" {
     error_message = "Valid values for var: monitoring_interval are (0, 1, 5, 10, 15, 30, 60)."
   }
 }
-
-# variable "snapshot_identifier" {
-#   description = "id of snapshot to restore. If you do not want to restore a db, leave the default empty string."
-#   type        = string
-#   default     = ""
-# }
 
 
 variable "enable_postgresql_log" {
@@ -246,4 +193,19 @@ variable "autoscaling_target_connections" {
   description = "Average number of connections threshold which will initiate autoscaling. Default value is 70% of db.r4/r5/r6g.large's default max_connections"
   type        = number
   default     = 700
+}
+
+
+variable "vpc_id" {
+  description = "ID of the VPC where to create security group"
+  type        = string
+  default     = ""
+}
+
+
+# aws_security_group
+variable "create_security_group" {
+  description = "Determines whether to create security group for RDS cluster"
+  type        = bool
+  default     = true
 }

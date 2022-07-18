@@ -95,3 +95,11 @@ variable "private_subnet_ids_p" {
   default = ["subnet-02de67bc25cfb7cc2" ,"subnet-0d9e13e6783b94ad0", "subnet-054fb2822fb7263ce", "subnet-07d340b21d5290cc9","subnet-090030e10c0804a6e","subnet-043d25f003cc36c61","subnet-0c2ae893c502cebd9"]
   #default = ["subnet-0e82857c0029600fd","subnet-0d1646de6ef6dc18b","subnet-0e9636f56d0a7b254","subnet-06c210d045456a182","s-025bdff61d31d55e3"]
 }
+
+
+variable "vpc_id" {
+  description = "ID of the VPC where to create security group"
+  type        = string
+  default     = "vpc-0bf2f390c74f05f12"
+}
+

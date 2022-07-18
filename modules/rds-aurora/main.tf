@@ -148,6 +148,51 @@ resource "aws_rds_cluster_instance" "primary" {
 
 
 ################################################################################
+# Security Group
+################################################################################
+
+resource "aws_security_group" "aurora_sg" {
+  count = var.create_security_group ? 1 : 0
+
+  name        = "aurora-sg"
+  #name_prefix = var.security_group_use_name_prefix ? "${var.name}-" : null
+  vpc_id      = var.vpc_id
+  description = "Control traffic to/from RDS Aurora"
+
+  tags = var.tags
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# TODO - change to map of ingress rules under one resource at next breaking change
+resource "aws_security_group_rule" "aurora_sg_ingress" {
+ 
+
+  description = "From allowed SGs"
+
+  type                     = "ingress"
+  from_port                = var.port
+  to_port                  = var.port
+  protocol                 = "tcp"
+  #source_security_group_id = element(var.allowed_security_groups, count.index)
+  security_group_id        = aws_security_group.aurora_sg.id
+  self = true
+}
+
+
+resource "aws_security_group_rule" "aurora_sg_egress" {
+ 
+  type                     = "egress"
+  from_port                = 0
+  to_port                  = 0
+  protocol                 = "-1"
+  #source_security_group_id = element(var.allowed_security_groups, count.index)
+  security_group_id        = aws_security_group.aurora_sg.id
+  
+}
+
+################################################################################
 # Autoscaling
 ################################################################################
 
@@ -163,7 +208,7 @@ resource "aws_appautoscaling_target" "aurora_scaling_target" {
 
 resource "aws_appautoscaling_policy" "aurora_scaling_policy" {
   count = var.autoscaling_enabled ? 1 : 0
-  
+
   name               = "target-metric"
   policy_type        = "TargetTrackingScaling"
   resource_id        = "cluster:${aws_rds_cluster.aurora_cluster.cluster_identifier}"
