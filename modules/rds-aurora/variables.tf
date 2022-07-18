@@ -63,18 +63,18 @@ variable "instance_class" {
   default     = "db.r5.large"
 }
 
-# variable "skip_final_snapshot" {
-#   type        = bool
-#   description = "skip creating a final snapshot before deleting the DB"
-#   #set the value to false for production workload
-#   default = true
-# }
+variable "skip_final_snapshot" {
+  type        = bool
+  description = "skip creating a final snapshot before deleting the DB"
+  #set the value to false for production workload
+  default = true
+}
 
-# variable "final_snapshot_identifier_prefix" {
-#   description = "The prefix name to use when creating a final snapshot on cluster destroy, appends a random 8 digits to name to ensure it's unique too."
-#   type        = string
-#   default     = "final"
-# }
+variable "final_snapshot_identifier_prefix" {
+  description = "The prefix name to use when creating a final snapshot on cluster destroy, appends a random 8 digits to name to ensure it's unique too."
+  type        = string
+  default     = "final"
+}
 
 variable "database_name" {
   description = "Name for an automatically created database on cluster creation"
@@ -191,32 +191,59 @@ variable "monitoring_interval" {
 #   default     = ""
 # }
 
-# variable "enable_audit_log" {
-#   description = "Enable MySQL audit log export to Amazon Cloudwatch."
-#   type        = bool
-#   default     = false
-# }
-
-# variable "enable_error_log" {
-#   description = "Enable MySQL error log export to Amazon Cloudwatch."
-#   type        = bool
-#   default     = false
-# }
-
-# variable "enable_general_log" {
-#   description = "Enable MySQL general log export to Amazon Cloudwatch."
-#   type        = bool
-#   default     = false
-# }
-
-# variable "enable_slowquery_log" {
-#   description = "Enable MySQL slowquery log export to Amazon Cloudwatch."
-#   type        = bool
-#   default     = false
-# }
 
 variable "enable_postgresql_log" {
   description = "Enable PostgreSQL log export to Amazon Cloudwatch."
   type        = bool
+  default     = true
+}
+
+
+# aws_appautoscaling_*
+variable "autoscaling_enabled" {
+  description = "Determines whether autoscaling of the cluster read replicas is enabled"
+  type        = bool
   default     = false
+}
+
+variable "autoscaling_max_capacity" {
+  description = "Maximum number of read replicas permitted when autoscaling is enabled"
+  type        = number
+  default     = 2
+}
+
+variable "autoscaling_min_capacity" {
+  description = "Minimum number of read replicas permitted when autoscaling is enabled"
+  type        = number
+  default     = 1
+}
+
+variable "predefined_metric_type" {
+  description = "The metric type to scale on. Valid values are `RDSReaderAverageCPUUtilization` and `RDSReaderAverageDatabaseConnections`"
+  type        = string
+  default     = "RDSReaderAverageCPUUtilization"
+}
+
+variable "autoscaling_scale_in_cooldown" {
+  description = "Cooldown in seconds before allowing further scaling operations after a scale in"
+  type        = number
+  default     = 300
+}
+
+variable "autoscaling_scale_out_cooldown" {
+  description = "Cooldown in seconds before allowing further scaling operations after a scale out"
+  type        = number
+  default     = 300
+}
+
+variable "autoscaling_target_cpu" {
+  description = "CPU threshold which will initiate autoscaling"
+  type        = number
+  default     = 70
+}
+
+variable "autoscaling_target_connections" {
+  description = "Average number of connections threshold which will initiate autoscaling. Default value is 70% of db.r4/r5/r6g.large's default max_connections"
+  type        = number
+  default     = 700
 }

@@ -1,26 +1,24 @@
 
-###########
-# Defaults
-###########
-
-# provider "aws" {
-#   #alias  = "primary"
-#   region = var.region
-# }
-
-# provider "aws" {
-#   alias  = "secondary"
-#   region = var.sec_region
-# }
-
 #########################
 # Collect data
 #########################
 
 data "aws_availability_zones" "region_p" {
   state    = "available"
-  #provider = aws.primary
+  filter{
+    name = "zone-type"
+    values = ["availability-zone"]
+  }
+  
 }
+
+# data "aws_availability_zones" "region_p" {
+#   all_availability_zones = true
+#   filter {
+#     name   = "group-name"
+#     values = ["us-east-1"]
+#   }
+# }
 
 # data "aws_availability_zones" "region_s" {
 #   state    = "available"
@@ -37,6 +35,21 @@ resource "random_password" "master_password" {
   length  = 10
   special = false
 }
+
+
+####################################
+# Generate Final snapshot identifier
+####################################
+
+resource "random_id" "snapshot_id" {
+
+  keepers = {
+    id = var.identifier
+  }
+
+  byte_length = 4
+}
+
 
 ###########
 # IAM
@@ -107,16 +120,10 @@ resource "aws_rds_cluster" "aurora_cluster" {
   storage_encrypted               = var.storage_encrypted #true
   #kms_key_id                      = var.storage_encrypted ? aws_kms_key.kms_p[0].arn : null
   apply_immediately               = true
-  #skip_final_snapshot             = var.skip_final_snapshot
-  #final_snapshot_identifier       = var.skip_final_snapshot ? null : "${var.final_snapshot_identifier_prefix}-${var.identifier}-${var.region}-${random_id.snapshot_id.hex}"
-  #snapshot_identifier             = var.snapshot_identifier
+  skip_final_snapshot             = var.skip_final_snapshot
+  final_snapshot_identifier       = var.skip_final_snapshot ? null : "${var.final_snapshot_identifier_prefix}-${var.identifier}-${var.region}-${random_id.snapshot_id.hex}"
   enabled_cloudwatch_logs_exports = local.logs_set
   tags                            = var.tags
-  #depends_on = [
-    # When this Aurora cluster is setup as a secondary, setting up the dependency makes sure to delete this cluster 1st before deleting current primary Cluster during terraform destroy
-    # Comment out the following line if this cluster has changed role to be the primary Aurora cluster because of a failover for terraform destroy to work
-    #aws_rds_cluster_instance.secondary,
-  #]
  
 }
 
@@ -130,7 +137,7 @@ resource "aws_rds_cluster_instance" "primary" {
   engine_version               = var.engine_version_pg
   auto_minor_version_upgrade   = var.auto_minor_version_upgrade #true
   instance_class               = var.instance_class
-  #db_subnet_group_name         = aws_db_subnet_group.private_p.name
+  db_subnet_group_name         = aws_db_subnet_group.aurora_subnet_group.name
   #db_parameter_group_name      = aws_db_parameter_group.aurora_db_parameter_group_p.id
   performance_insights_enabled = true
   monitoring_interval          = var.monitoring_interval
@@ -138,6 +145,48 @@ resource "aws_rds_cluster_instance" "primary" {
   apply_immediately            = true
   tags                         = var.tags
 }
+
+
+################################################################################
+# Autoscaling
+################################################################################
+
+resource "aws_appautoscaling_target" "aurora_scaling_target" {
+  count = var.autoscaling_enabled ? 1 : 0
+
+  max_capacity       = var.autoscaling_max_capacity
+  min_capacity       = var.autoscaling_min_capacity
+  resource_id        = "cluster:${aws_rds_cluster.aurora_cluster.cluster_identifier}"
+  scalable_dimension = "rds:cluster:ReadReplicaCount"
+  service_namespace  = "rds"
+}
+
+resource "aws_appautoscaling_policy" "aurora_scaling_policy" {
+  count = var.autoscaling_enabled ? 1 : 0
+  
+  name               = "target-metric"
+  policy_type        = "TargetTrackingScaling"
+  resource_id        = "cluster:${aws_rds_cluster.aurora_cluster.cluster_identifier}"
+  scalable_dimension = "rds:cluster:ReadReplicaCount"
+  service_namespace  = "rds"
+
+  target_tracking_scaling_policy_configuration {
+    predefined_metric_specification {
+      predefined_metric_type = var.predefined_metric_type
+    }
+
+    scale_in_cooldown  = var.autoscaling_scale_in_cooldown
+    scale_out_cooldown = var.autoscaling_scale_out_cooldown
+    target_value       = var.predefined_metric_type == "RDSReaderAverageCPUUtilization" ? var.autoscaling_target_cpu : var.autoscaling_target_connections
+  }
+
+  depends_on = [
+    aws_appautoscaling_target.aurora_scaling_target
+  ]
+}
+
+
+
 
 
 #############################
