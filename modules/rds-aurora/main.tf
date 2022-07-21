@@ -1,7 +1,6 @@
 ###########
 # Defaults
 ###########
-
 terraform {
   required_version = ">= 1.0.0"
   
@@ -12,7 +11,6 @@ terraform {
     }
   }
 }
-
 
 provider "aws" {
   alias  = "primary"
