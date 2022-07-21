@@ -17,6 +17,7 @@ module "aurora" {
   region                   = var.region
   sec_region               = var.sec_region
   private_subnet_ids_p     = var.private_subnet_ids_p #[module.aurora_vpc_p.private_subnet_1a_id, module.aurora_vpc_p.private_subnet_2a_id, module.aurora_vpc_p.private_subnet_3a_id]
+  private_subnet_ids_s     = var.private_subnet_ids_s
   engine                   = var.engine
   engine_version_pg        = var.engine_version_pg
   username                 = var.username

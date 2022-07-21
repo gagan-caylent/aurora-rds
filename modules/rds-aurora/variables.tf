@@ -28,6 +28,11 @@ variable "private_subnet_ids_p" {
 }
 
 
+variable "private_subnet_ids_s" {
+  type        = list(string)
+  description = "A list of private subnet IDs in your Primary AWS region VPC"
+}
+
 variable "primary_instance_count" {
   description = "instance count for primary Aurora cluster"
   type        = number

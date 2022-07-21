@@ -2,15 +2,15 @@
 # Defaults
 ###########
 
-# provider "aws" {
-#   alias  = "primary"
-#   region = var.region
-# }
+provider "aws" {
+  alias  = "primary"
+  region = var.region
+}
 
-# provider "aws" {
-#   alias  = "secondary"
-#   region = var.sec_region
-# }
+provider "aws" {
+  alias  = "secondary"
+  region = var.sec_region
+}
 
 
 #########################
@@ -171,8 +171,8 @@ resource "aws_rds_cluster_instance" "primary" {
   count                        = var.primary_instance_count #2
   provider                     = aws.primary
   identifier                   = "${var.name}-${var.region}-${count.index + 1}"
-  cluster_identifier           = aws_rds_cluster.aurora_cluster.id
-  engine                       = aws_rds_cluster.aurora_cluster.engine
+  cluster_identifier           = aws_rds_cluster.primary.id
+  engine                       = aws_rds_cluster.primary.engine
   engine_version               = var.engine_version_pg
   auto_minor_version_upgrade   = var.auto_minor_version_upgrade #true
   instance_class               = var.instance_class
@@ -221,8 +221,8 @@ resource "aws_rds_cluster_instance" "secondary" {
   count                        = var.secondary_instance_count #2
   provider                     = aws.secondary
   identifier                   = "${var.name}-${var.sec_region}-${count.index + 1}"
-  cluster_identifier           = aws_rds_cluster.aurora_cluster.id
-  engine                       = aws_rds_cluster.aurora_cluster.engine
+  cluster_identifier           = aws_rds_cluster.secondary.id
+  engine                       = aws_rds_cluster.secondary.engine
   engine_version               = var.engine_version_pg
   auto_minor_version_upgrade   = var.auto_minor_version_upgrade #true
   instance_class               = var.instance_class
