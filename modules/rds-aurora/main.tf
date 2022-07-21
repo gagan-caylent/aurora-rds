@@ -1,3 +1,17 @@
+###########
+# Defaults
+###########
+
+# provider "aws" {
+#   alias  = "primary"
+#   region = var.region
+# }
+
+# provider "aws" {
+#   alias  = "secondary"
+#   region = var.sec_region
+# }
+
 
 #########################
 # Collect data
@@ -9,8 +23,18 @@ data "aws_availability_zones" "region_p" {
     name = "zone-type"
     values = ["availability-zone"]
   }
-  
+  provider = aws.primary
 }
+
+data "aws_availability_zones" "region_s" {
+  state    = "available"
+  filter{
+    name = "zone-type"
+    values = ["availability-zone"]
+  }
+  provider = aws.secondary
+}
+
 
 # data "aws_availability_zones" "region_p" {
 #   all_availability_zones = true
@@ -84,30 +108,45 @@ resource "aws_iam_role" "rds_enhanced_monitoring" {
 # DB Subnet
 ###########
 
-resource "aws_db_subnet_group" "aurora_subnet_group" {
+resource "aws_db_subnet_group" "subnet_group_private_p" {
   name       = "aurora-subnet-group"
   subnet_ids = var.private_subnet_ids_p
-  tags = {
-    Name = "My DB subnet group"
-  }
+  provider   = aws.primary
+}
+
+
+resource "aws_db_subnet_group" "subnet_group_private_s" {
+  name       = "aurora-subnet-group"
+  subnet_ids = var.private_subnet_ids_s
+  provider   = aws.secondary
 }
 
 
 
-########
+######################################################
 # AURORA
-########
+######################################################
 
 
-resource "aws_rds_cluster" "aurora_cluster" {
-  #provider                         = aws.primary
-  #global_cluster_identifier        = var.setup_globaldb ? aws_rds_global_cluster.globaldb[0].id : null
+resource "aws_rds_global_cluster" "globaldb" {
+  provider                  = aws.primary
+  global_cluster_identifier = "${var.identifier}-globaldb"
+  engine                    = var.engine
+  engine_version            = var.engine_version_pg
+  database_name             = var.database_name
+  #storage_encrypted         = var.storage_encrypted
+}
+
+
+resource "aws_rds_cluster" "primary" {
+  provider                         = aws.primary
+  global_cluster_identifier        = aws_rds_global_cluster.globaldb.id
   cluster_identifier               = "${var.identifier}-${var.region}"
   engine                           = var.engine #"aurora-postgresql"
   engine_version                   = var.engine_version_pg
   #allow_major_version_upgrade      = var.allow_major_version_upgrade
   availability_zones               = [data.aws_availability_zones.region_p.names[0], data.aws_availability_zones.region_p.names[1], data.aws_availability_zones.region_p.names[2]]
-  db_subnet_group_name             = aws_db_subnet_group.aurora_subnet_group.name
+  db_subnet_group_name             = aws_db_subnet_group.subnet_group_private_p.name
   port                             = var.port #"5432"
   database_name                    = var.database_name
   master_username                  = var.username
@@ -116,6 +155,7 @@ resource "aws_rds_cluster" "aurora_cluster" {
   #db_instance_parameter_group_name = var.allow_major_version_upgrade ? aws_db_parameter_group.aurora_db_parameter_group_p.id : null
   backup_retention_period          = var.backup_retention_period
   preferred_backup_window          = var.preferred_backup_window
+  vpc_security_group_ids           = [aws_security_group.aurora_sg.id]
   #tfsec:ignore:aws-rds-encrypt-cluster-storage-data
   storage_encrypted               = var.storage_encrypted #true
   #kms_key_id                      = var.storage_encrypted ? aws_kms_key.kms_p[0].arn : null
@@ -124,20 +164,19 @@ resource "aws_rds_cluster" "aurora_cluster" {
   final_snapshot_identifier       = var.skip_final_snapshot ? null : "${var.final_snapshot_identifier_prefix}-${var.identifier}-${var.region}-${random_id.snapshot_id.hex}"
   enabled_cloudwatch_logs_exports = local.logs_set
   tags                            = var.tags
- 
 }
 
 #tfsec:ignore:aws-rds-enable-performance-insights-encryption tfsec:ignore:aws-rds-enable-performance-insights
 resource "aws_rds_cluster_instance" "primary" {
   count                        = var.primary_instance_count #2
-  #provider                     = aws.primary
+  provider                     = aws.primary
   identifier                   = "${var.name}-${var.region}-${count.index + 1}"
   cluster_identifier           = aws_rds_cluster.aurora_cluster.id
   engine                       = aws_rds_cluster.aurora_cluster.engine
   engine_version               = var.engine_version_pg
   auto_minor_version_upgrade   = var.auto_minor_version_upgrade #true
   instance_class               = var.instance_class
-  db_subnet_group_name         = aws_db_subnet_group.aurora_subnet_group.name
+  db_subnet_group_name         = aws_db_subnet_group.subnet_group_private_p.name
   #db_parameter_group_name      = aws_db_parameter_group.aurora_db_parameter_group_p.id
   performance_insights_enabled = true
   monitoring_interval          = var.monitoring_interval
@@ -147,13 +186,64 @@ resource "aws_rds_cluster_instance" "primary" {
 }
 
 
+resource "aws_rds_cluster" "secondary" {
+  provider                         = aws.secondary
+  global_cluster_identifier        = aws_rds_global_cluster.globaldb.id
+  cluster_identifier               = "${var.identifier}-${var.sec_region}"
+  engine                           = var.engine #"aurora-postgresql"
+  engine_version                   = var.engine_version_pg
+  #allow_major_version_upgrade      = var.allow_major_version_upgrade
+  availability_zones               = [data.aws_availability_zones.region_s.names[0], data.aws_availability_zones.region_s.names[1], data.aws_availability_zones.region_s.names[2]]
+  db_subnet_group_name             = aws_db_subnet_group.subnet_group_private_s.name
+  port                             = var.port #"5432"
+  #db_cluster_parameter_group_name  = aws_rds_cluster_parameter_group.aurora_cluster_parameter_group_p.id
+  #db_instance_parameter_group_name = var.allow_major_version_upgrade ? aws_db_parameter_group.aurora_db_parameter_group_p.id : null
+  backup_retention_period          = var.backup_retention_period
+  preferred_backup_window          = var.preferred_backup_window
+  #vpc_security_group_ids           = [aws_security_group.aurora_sg.id]
+  #tfsec:ignore:aws-rds-encrypt-cluster-storage-data
+  storage_encrypted               = var.storage_encrypted #true
+  #kms_key_id                      = var.storage_encrypted ? aws_kms_key.kms_p[0].arn : null
+  apply_immediately               = true
+  skip_final_snapshot             = var.skip_final_snapshot
+  final_snapshot_identifier       = var.skip_final_snapshot ? null : "${var.final_snapshot_identifier_prefix}-${var.identifier}-${var.sec_region}-${random_id.snapshot_id.hex}"
+  enabled_cloudwatch_logs_exports = local.logs_set
+
+  source_region                   = var.region
+  tags                            = var.tags
+  depends_on = [
+    aws_rds_cluster.primary
+  ]
+}
+
+#tfsec:ignore:aws-rds-enable-performance-insights-encryption tfsec:ignore:aws-rds-enable-performance-insights
+resource "aws_rds_cluster_instance" "secondary" {
+  count                        = var.secondary_instance_count #2
+  provider                     = aws.secondary
+  identifier                   = "${var.name}-${var.sec_region}-${count.index + 1}"
+  cluster_identifier           = aws_rds_cluster.aurora_cluster.id
+  engine                       = aws_rds_cluster.aurora_cluster.engine
+  engine_version               = var.engine_version_pg
+  auto_minor_version_upgrade   = var.auto_minor_version_upgrade #true
+  instance_class               = var.instance_class
+  db_subnet_group_name         = aws_db_subnet_group.subnet_group_private_s.name
+  #db_parameter_group_name      = aws_db_parameter_group.aurora_db_parameter_group_p.id
+  performance_insights_enabled = true
+  monitoring_interval          = var.monitoring_interval
+  monitoring_role_arn          = aws_iam_role.rds_enhanced_monitoring.arn
+  apply_immediately            = true
+  tags                         = var.tags
+}
+
+
+
+
 ################################################################################
 # Security Group
 ################################################################################
 
 resource "aws_security_group" "aurora_sg" {
-  count = var.create_security_group ? 1 : 0
-
+  provider = aws.primary
   name        = "aurora-sg"
   #name_prefix = var.security_group_use_name_prefix ? "${var.name}-" : null
   vpc_id      = var.vpc_id
@@ -189,6 +279,7 @@ resource "aws_security_group_rule" "aurora_sg_egress" {
   protocol                 = "-1"
   #source_security_group_id = element(var.allowed_security_groups, count.index)
   security_group_id        = aws_security_group.aurora_sg.id
+  cidr_blocks              = ["0.0.0.0/0"] 
   
 }
 
@@ -201,7 +292,7 @@ resource "aws_appautoscaling_target" "aurora_scaling_target" {
 
   max_capacity       = var.autoscaling_max_capacity
   min_capacity       = var.autoscaling_min_capacity
-  resource_id        = "cluster:${aws_rds_cluster.aurora_cluster.cluster_identifier}"
+  resource_id        = "cluster:${aws_rds_cluster.primary.cluster_identifier}"
   scalable_dimension = "rds:cluster:ReadReplicaCount"
   service_namespace  = "rds"
 }
@@ -211,7 +302,7 @@ resource "aws_appautoscaling_policy" "aurora_scaling_policy" {
 
   name               = "target-metric"
   policy_type        = "TargetTrackingScaling"
-  resource_id        = "cluster:${aws_rds_cluster.aurora_cluster.cluster_identifier}"
+  resource_id        = "cluster:${aws_rds_cluster.primary.cluster_identifier}"
   scalable_dimension = "rds:cluster:ReadReplicaCount"
   service_namespace  = "rds"
 
@@ -231,7 +322,91 @@ resource "aws_appautoscaling_policy" "aurora_scaling_policy" {
 }
 
 
+# ##################
+# # AWS Backup vault
+# ##################
 
+# resource "aws_backup_vault" "database_vault" {
+#   #count       = var.enabled && var.vault_name != null ? 1 : 0
+#   name        = var.vault_name
+#   #kms_key_arn = var.vault_kms_key_arn
+#   tags        = var.tags
+# }
+
+
+
+# # AWS Backup plan
+# resource "aws_backup_plan" "database_plan" {
+#   #count = var.enabled ? 1 : 0
+#   name  = var.plan_name
+
+#   # Rules
+#   dynamic "rule" {
+#     for_each = var.rules
+#     content {
+#       rule_name                = lookup(rule.value, "name", null)
+#       target_vault_name        = aws_backup_vault.database_vault.name
+#       schedule                 = lookup(rule.value, "schedule", null)
+#       start_window             = lookup(rule.value, "start_window", null)
+#       completion_window        = lookup(rule.value, "completion_window", null)
+#       #enable_continuous_backup = lookup(rule.value, "enable_continuous_backup", null)
+#       #recovery_point_tags      = length(lookup(rule.value, "recovery_point_tags", {})) == 0 ? var.tags : lookup(rule.value, "recovery_point_tags")
+
+#       # # Lifecycle
+#       # dynamic "lifecycle" {
+#       #   for_each = length(lookup(rule.value, "lifecycle", {})) == 0 ? [] : [lookup(rule.value, "lifecycle", {})]
+#       #   content {
+#       #     cold_storage_after = lookup(lifecycle.value, "cold_storage_after", 0)
+#       #     delete_after       = lookup(lifecycle.value, "delete_after", 90)
+#       #   }
+#       # }
+
+#       # Copy action
+#       dynamic "copy_action" {
+#         for_each = lookup(rule.value, "copy_actions", [])
+#         content {
+#           destination_vault_arn = lookup(copy_action.value, "destination_vault_arn", null)
+
+#           # Copy Action Lifecycle
+#           # dynamic "lifecycle" {
+#           #   for_each = length(lookup(copy_action.value, "lifecycle", {})) == 0 ? [] : [lookup(copy_action.value, "lifecycle", {})]
+#           #   content {
+#           #     cold_storage_after = lookup(lifecycle.value, "cold_storage_after", 0)
+#           #     delete_after       = lookup(lifecycle.value, "delete_after", 90)
+#           #   }
+#           # }
+#         }
+#       }
+#     }
+#   }
+
+#   # # Advanced backup setting
+#   # dynamic "advanced_backup_setting" {
+#   #   for_each = var.windows_vss_backup ? [1] : []
+#   #   content {
+#   #     backup_options = {
+#   #       WindowsVSS = "enabled"
+#   #     }
+#   #     resource_type = "EC2"
+#   #   }
+#   # }
+
+#   # Tags
+#   tags = var.tags
+
+#   # First create the vault if needed
+#   depends_on = [aws_backup_vault.database_vault]
+# }
+
+# resource "aws_backup_selection" "database_selection" {
+#   iam_role_arn = "arn:aws:iam::131578276461:role/service-role/AWSBackupDefaultServiceRole"
+#   name         = "aurora_database_backup_selection"
+#   plan_id      = aws_backup_plan.database_plan.id
+
+#   resources = [
+#     aws_rds_cluster.aurora_cluster.arn
+#   ]
+# }
 
 
 #############################

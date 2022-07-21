@@ -4,6 +4,12 @@ variable "region" {
 }
 
 
+variable "sec_region" {
+  type        = string
+  description = "The name of the secondary AWS region you wish to deploy into"
+}
+
+
 variable "identifier" {
   description = "Cluster identifier"
   type        = string
@@ -26,6 +32,12 @@ variable "primary_instance_count" {
   description = "instance count for primary Aurora cluster"
   type        = number
   default     = 2
+}
+
+variable "secondary_instance_count" {
+  description = "instance count for secondary Aurora cluster"
+  type        = number
+  default     = 1
 }
 
 variable "instance_class" {
@@ -209,3 +221,21 @@ variable "create_security_group" {
   type        = bool
   default     = true
 }
+
+
+# variable "vault_name" {
+#   description = "Name of the backup vault to create. If not given, AWS use default"
+#   type        = string
+#   default     = null
+# }
+
+# variable "plan_name" {
+#   description = "The display name of a backup plan"
+#   type        = string
+# }
+
+# variable "rules" {
+#   description = "A list of rule maps"
+#   type        = any
+#   default     = []
+# }

@@ -4,17 +4,23 @@ variable "region" {
   default     = "us-east-1"
 }
 
+variable "sec_region" {
+  description = "The name of the secondary AWS region you wish to deploy into"
+  type        = string
+  default     = "us-east-2"
+}
 
-variable "namespace" {
-  description = "namespace, which could be your organiation name, e.g. amazon"
-  type        = string
-  default     = "aws"
-}
-variable "env" {
-  description = "environment, e.g. 'sit', 'uat', 'prod' etc"
-  type        = string
-  default     = "dev"
-}
+
+# variable "namespace" {
+#   description = "namespace, which could be your organiation name, e.g. amazon"
+#   type        = string
+#   default     = "aws"
+# }
+# variable "env" {
+#   description = "environment, e.g. 'sit', 'uat', 'prod' etc"
+#   type        = string
+#   default     = "dev"
+# }
 variable "name" {
   description = "deployment name"
   type        = string
@@ -86,6 +92,12 @@ variable "primary_instance_count" {
   description = "instance count for primary Aurora cluster"
   type        = number
   default     = 2
+}
+
+variable "secondary_instance_count" {
+  description = "instance count for secondary Aurora cluster"
+  type        = number
+  default     = 1
 }
 
 
