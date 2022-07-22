@@ -111,9 +111,9 @@ variable "private_subnet_ids_p" {
 
 variable "private_subnet_ids_s" {
   type        = list(string)
-  description = "A list of private subnet IDs in your Primary AWS region VPC"
-  default = ["subnet-00dcb3fa5fb6ee4d6","subnet-0fd2b190e77b3b6c9"]
-  #default = ["subnet-0e82857c0029600fd","subnet-0d1646de6ef6dc18b","subnet-0e9636f56d0a7b254","subnet-06c210d045456a182","s-025bdff61d31d55e3"]
+  description = "A list of private subnet IDs in your secondary  AWS region VPC"
+  #default = ["subnet-00dcb3fa5fb6ee4d6","subnet-0fd2b190e77b3b6c9"]
+  default = ["subnet-074c33a1dcbf4282d", "subnet-0098e0f4cfa5ca36f","subnet-067fd1e9d46c38fa6",]
 }
 
 

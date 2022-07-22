@@ -2,26 +2,27 @@
 # Defaults
 ###########
 
-terraform {
-  required_version = ">= 1.0.0"
+# terraform {
+#   required_version = ">= 1.0.0"
   
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = ">= 4.9.0"
-    }
-  }
-}
-
+#   required_providers {
+#     aws = {
+#       source  = "hashicorp/aws"
+#       version = ">= 4.9.0"
+#     }
+#   }
+# }
 
 provider "aws" {
   alias  = "primary"
   region = var.region
+  profile = "caylent-dev"
 }
 
 provider "aws" {
   alias  = "secondary"
   region = var.sec_region
+  profile= "caylent-dev"
 }
 
 
@@ -71,6 +72,33 @@ resource "random_password" "master_password" {
   length  = 10
   special = false
 }
+
+
+resource "aws_secretsmanager_secret" "secret_key" {
+  provider   = aws.primary
+
+  name_prefix = "Forr"
+  description = "Aurora DB Master Passwo"
+  tags = { Name = "Forr-DB-creds" }
+}
+
+
+resource "aws_secretsmanager_secret_version" "secret_key_value" {
+
+
+  secret_id     = aws_secretsmanager_secret.secret_key.id
+  #secret_string = jsonecode(var.aurora_secret_values)
+  secret_string = <<EOF
+  {
+    "master_username" = "${var.username}",
+    "master_password" = "${random_password.master_password.result}",
+    "database_name" = "${var.database_name}",
+    "port" = "${var.port}"
+  }
+EOF
+
+}
+
 
 
 ####################################
@@ -146,7 +174,7 @@ resource "aws_rds_global_cluster" "globaldb" {
   engine                    = var.engine
   engine_version            = var.engine_version_pg
   database_name             = var.database_name
-  #storage_encrypted         = var.storage_encrypted
+  storage_encrypted         = var.storage_encrypted
 }
 
 
@@ -215,7 +243,7 @@ resource "aws_rds_cluster" "secondary" {
   #vpc_security_group_ids           = [aws_security_group.aurora_sg.id]
   #tfsec:ignore:aws-rds-encrypt-cluster-storage-data
   storage_encrypted               = var.storage_encrypted #true
-  #kms_key_id                      = var.storage_encrypted ? aws_kms_key.kms_p[0].arn : null
+  kms_key_id                      = "arn:aws:kms:us-east-2:131578276461:key/a99863ea-2b12-4717-9a58-bfd3cb87106f"#var.storage_encrypted ? aws_kms_key.kms_p[0].arn : null
   apply_immediately               = true
   skip_final_snapshot             = var.skip_final_snapshot
   final_snapshot_identifier       = var.skip_final_snapshot ? null : "${var.final_snapshot_identifier_prefix}-${var.identifier}-${var.sec_region}-${random_id.snapshot_id.hex}"
@@ -239,6 +267,7 @@ resource "aws_rds_cluster_instance" "secondary" {
   auto_minor_version_upgrade   = var.auto_minor_version_upgrade #true
   instance_class               = var.instance_class
   db_subnet_group_name         = aws_db_subnet_group.subnet_group_private_s.name
+  #kms_key_id                      = "arn:aws:kms:us-east-2:131578276461:key/a99863ea-2b12-4717-9a58-bfd3cb87106f"
   #db_parameter_group_name      = aws_db_parameter_group.aurora_db_parameter_group_p.id
   performance_insights_enabled = true
   monitoring_interval          = var.monitoring_interval

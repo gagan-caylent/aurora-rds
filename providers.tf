@@ -16,11 +16,11 @@ terraform {
 provider "aws" {
   region = "us-east-1"
   profile = "caylent-dev"
-  alias = "primary"
+  #alias = "primary"
 }
 
-provider "aws" {
-  region = "us-east-2"
-  profile = "caylent-dev"
-  alias = "secondary"
-}
+# provider "aws" {
+#   region = "us-east-2"
+#   profile = "caylent-dev"
+#   alias = "secondary"
+# }

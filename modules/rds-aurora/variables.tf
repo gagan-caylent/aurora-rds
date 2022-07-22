@@ -114,7 +114,7 @@ variable "auto_minor_version_upgrade" {
 variable "storage_encrypted" {
   description = "Specifies whether the underlying Aurora storage layer should be encrypted"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "engine" {
